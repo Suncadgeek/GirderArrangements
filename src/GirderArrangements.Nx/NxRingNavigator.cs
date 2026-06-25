@@ -11,8 +11,12 @@ namespace GirderArrangements.Nx
     /// <summary>
     /// Énumère les cellules (R2) et leurs arcs (R3) d'un anneau de stockage OUVERT EN STRUCTURE SEULE
     /// (coquille, aucun composant chargé). On lit la structure sur 2 niveaux via OpenComponents
-    /// (ComponentOnly) — qui peuple Component.Name SANS charger la géométrie (la maquette anneau est
-    /// énorme : on ne descend jamais dans les aimants/poutres). Porté de CheckDistances.ReportService.
+    /// (ComponentOnly) — qui peuple le nom du prototype SANS charger la géométrie (la maquette anneau
+    /// est énorme : on ne descend jamais dans les aimants/poutres). Recette validée NX.
+    ///
+    /// PIÈGE : Component.Name n'est PAS fiable en chargement partiel (ne donne le suffixe que si la
+    /// pièce a déjà été analysée ; sinon = l'id seul). On lit le nom via ((Part)Prototype).Name
+    /// (« CAO…/AA-V3631_ARC20 »), repli sur l'attribut « DB_PART_NAME » (« V3631_ARC20 »).
     /// </summary>
     public sealed class NxRingNavigator
     {
@@ -59,15 +63,15 @@ namespace GirderArrangements.Nx
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var cell in cellComps)
             {
-                var cellName = (cell.Name ?? "").Trim();
                 string cellId, cellRev;
                 DecodeChild(ComponentPartName(cell.Tag), out cellId, out cellRev);
+                var cellName = ReadableName(cell);
 
                 var rc = new RingCell { Name = cellName.Length > 0 ? cellName : cellId, TcRef = cellId };
                 foreach (var node in childByCell[cell])
                 {
-                    var nom = (node.Name ?? "").Trim();
-                    if (!_naming.IsArc(nom)) continue;          // on ne garde que les arcs (pas les SD)
+                    var nom = ReadableName(node);              // ((Part)Prototype).Name, PAS Component.Name
+                    if (!_naming.IsArc(nom)) continue;          // on ne garde que les arcs (pas les SD/servitudes)
                     string id, rev;
                     if (!DecodeChild(ComponentPartName(node.Tag), out id, out rev)) continue;
                     if (!seen.Add(id)) continue;                // dédup d'occurrence
@@ -82,7 +86,7 @@ namespace GirderArrangements.Nx
 
         /// <summary>
         /// Charge la STRUCTURE des composants (ComponentOnly) — la pièce elle-même, sans descendre dans
-        /// ses enfants. Suffit à peupler Component.Name ; ne charge donc PAS la géométrie.
+        /// ses enfants. Suffit à peupler le prototype (nom lisible) ; ne charge donc PAS la géométrie.
         /// </summary>
         private void LoadStructure(Assemblies.Component[] comps, string label)
         {
@@ -97,6 +101,40 @@ namespace GirderArrangements.Nx
                 _log.Info("Structure " + label + " : " + ok + "/" + comps.Length + " chargée(s).");
             }
             catch (Exception ex) { _log.Warn("Chargement structure " + label + " : " + ex.Message); }
+        }
+
+        /// <summary>
+        /// Nom lisible du composant via son prototype (fiable après OpenComponents ComponentOnly) :
+        /// attribut métier « DB_PART_NAME » si présent, sinon ((Part)Prototype).Name nettoyé de son
+        /// préfixe managé « &lt;id&gt;/&lt;rev&gt;- ». Repli ultime sur Component.Name (peu fiable).
+        /// </summary>
+        private string ReadableName(Assemblies.Component c)
+        {
+            var part = c.Prototype as Part;
+            if (part != null)
+            {
+                try
+                {
+#pragma warning disable CS0618 // GetStringAttribute déprécié mais validé ici ; repli sûr sur Prototype.Name
+                    var v = part.GetStringAttribute("DB_PART_NAME");
+#pragma warning restore CS0618
+                    if (!string.IsNullOrEmpty(v)) return v.Trim();
+                }
+                catch { /* attribut absent → on lit le nom de pièce */ }
+
+                var n = part.Name;                              // « CAO000164498/AA-V3631_ARC20 »
+                if (!string.IsNullOrEmpty(n)) return StripManagedPrefix(n);
+            }
+            return (c.Name ?? "").Trim();
+        }
+
+        /// <summary>« CAO…/AA-V3631_ARC20 » → « V3631_ARC20 » (préfixe id/rév retiré).</summary>
+        private static string StripManagedPrefix(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return "";
+            int slash = s.IndexOf('/');
+            int dash = s.IndexOf('-');
+            return (slash >= 0 && dash > slash) ? s.Substring(dash + 1).Trim() : s.Trim();
         }
 
         /// <summary>Nom de pièce complet d'un composant SANS charger sa pièce (UF_ASSEM_ask_component_data).</summary>

@@ -37,11 +37,7 @@ namespace GirderArrangements.Nx
             var existing = FindLoadedPart(token);
             if (existing != null)
             {
-                PartLoadStatus plsReuse;
-                theSession.Parts.SetActiveDisplay(existing, DisplayPartOption.AllowAdditional,
-                    PartDisplayPartWorkPartOption.UseLast, out plsReuse);
-                plsReuse.Dispose();
-                _ctx.RefreshParts();
+                ForceWorkPart(existing);
                 _log.Info("Pièce déjà ouverte : réutilisée.");
                 return existing;
             }
@@ -52,8 +48,25 @@ namespace GirderArrangements.Nx
             PartLoadStatus pls;
             var part = (Part)theSession.Parts.OpenActiveDisplay(spec, DisplayPartOption.AllowAdditional, out pls);
             pls.Dispose();
-            _ctx.RefreshParts();
+            ForceWorkPart(part);
             return part;
+        }
+
+        /// <summary>
+        /// Force la pièce comme pièce de TRAVAIL (= affichage). Sinon Session.Parts.Work peut rester null
+        /// après OpenActiveDisplay → « Aucun assemblage dans la pièce de travail ». (Recette validée NX.)
+        /// </summary>
+        private void ForceWorkPart(Part part)
+        {
+            try
+            {
+                PartLoadStatus pls;
+                _ctx.Session.Parts.SetActiveDisplay(part, DisplayPartOption.AllowAdditional,
+                    PartDisplayPartWorkPartOption.SameAsDisplay, out pls);
+                if (pls != null) pls.Dispose();
+            }
+            catch (Exception ex) { _log.Warn("Activation pièce de travail : " + ex.Message); }
+            _ctx.RefreshParts();
         }
 
         /// <summary>
@@ -67,10 +80,13 @@ namespace GirderArrangements.Nx
             {
                 if (partial)
                 {
+                    // Recette validée NX : None + PartialLoading, mais PartLoadOption=FullyLoad
+                    // (requis pour lire le nom .prt via Prototype.Name) ; Lightweight=false (sinon
+                    // OpenComponents échoue). None évite de charger l'arbre jusqu'aux aimants.
                     lo.ComponentsToLoad = LoadOptions.LoadComponents.None;
                     lo.UsePartialLoading = true;
                     lo.UseLightweightRepresentations = false;
-                    lo.PartLoadOption = LoadOptions.LoadOption.PartiallyLoad;
+                    lo.PartLoadOption = LoadOptions.LoadOption.FullyLoad;
                 }
                 else
                 {
