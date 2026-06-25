@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using NXOpen;
 using GirderArrangements.Core;
+using Assemblies = NXOpen.Assemblies;
 
 namespace GirderArrangements.Nx
 {
@@ -34,22 +35,54 @@ namespace GirderArrangements.Nx
             var theSession = _ctx.Session;
             var token = (tcRef ?? "").Trim();
 
+            Part part;
             var existing = FindLoadedPart(token);
             if (existing != null)
             {
                 ForceWorkPart(existing);
                 _log.Info("Pièce déjà ouverte : réutilisée.");
-                return existing;
+                part = existing;
+            }
+            else
+            {
+                ApplyLoadOptions(theSession.Parts.LoadOptions, partial);
+                var spec = ResolveManagedSpec(token);
+                _log.Info((partial ? "Ouverture structure : " : "Ouverture : ") + spec);
+                PartLoadStatus pls;
+                part = (Part)theSession.Parts.OpenActiveDisplay(spec, DisplayPartOption.AllowAdditional, out pls);
+                pls.Dispose();
+                ForceWorkPart(part);
             }
 
-            ApplyLoadOptions(theSession.Parts.LoadOptions, partial);
-            var spec = ResolveManagedSpec(token);
-            _log.Info((partial ? "Ouverture structure : " : "Ouverture : ") + spec);
-            PartLoadStatus pls;
-            var part = (Part)theSession.Parts.OpenActiveDisplay(spec, DisplayPartOption.AllowAdditional, out pls);
-            pls.Dispose();
-            ForceWorkPart(part);
+            // En mode PLEIN, charger TOUT le sous-arbre de l'arc (poutres + aimants + cav) : sinon, si l'arc
+            // était déjà ouvert en structure seule (passe du listing anneau), ses enfants restent NON chargés
+            // → noms en « id/AA » sans suffixe et aucune géométrie. WholePartTree ne charge QUE cet arc.
+            if (!partial) LoadArcSubtree(part);
             return part;
+        }
+
+        /// <summary>
+        /// Charge entièrement le sous-arbre de l'arc (OpenComponents WholePartTree sur les enfants de la
+        /// racine) → noms lisibles (Prototype.Name) + géométrie (bodies) disponibles. Idempotent.
+        /// </summary>
+        private void LoadArcSubtree(Part part)
+        {
+            try
+            {
+                // Réarme des options PLEINES (l'arc a pu être ouvert en None lors du listing anneau) :
+                // sans ça, OpenComponents ne ramènerait pas la géométrie.
+                ApplyLoadOptions(_ctx.Session.Parts.LoadOptions, partial: false);
+                var root = part != null ? part.ComponentAssembly.RootComponent : null;
+                var children = root != null ? root.GetChildren() : null;
+                if (children == null || children.Length == 0) return;
+                Assemblies.ComponentAssembly.OpenComponentStatus[] st;
+                part.ComponentAssembly.OpenComponents(
+                    Assemblies.ComponentAssembly.OpenOption.WholeAssembly, children, out st);
+                int ok = 0;
+                if (st != null) foreach (var s in st) if (s == Assemblies.ComponentAssembly.OpenComponentStatus.SuccessfullyOpened) ok++;
+                _log.Info("Arc chargé entièrement : " + ok + "/" + children.Length + " composant(s) racine.");
+            }
+            catch (Exception ex) { _log.Warn("Chargement complet de l'arc : " + ex.Message); }
         }
 
         /// <summary>

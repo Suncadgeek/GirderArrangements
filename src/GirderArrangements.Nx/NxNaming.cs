@@ -7,17 +7,39 @@ namespace GirderArrangements.Nx
     internal static class NxNaming
     {
         /// <summary>
-        /// Nom de pièce du prototype (réf TC en managé), avec repli sur le nom d'instance.
+        /// Nom métier LISIBLE du composant, fiable une fois la pièce chargée :
+        ///   1) attribut « DB_PART_NAME » (« V3631_ARC20 ») ;
+        ///   2) ((Part)Prototype).Name (« CAO…/AA-V3631_ARC20 ») nettoyé de son préfixe id/rév ;
+        ///   3) repli DisplayName / Name (peu fiable).
+        /// ⚠️ Ne PAS se fier à Component.Name ni à Prototype.OwningPart.Name : en chargement partiel ils
+        /// renvoient l'id seul (« CAO000166374/AA »), d'où des composants « non classés ». (Recette NX.)
         /// </summary>
         public static string PartName(Assemblies.Component comp)
         {
-            try
+            var part = comp != null ? comp.Prototype as Part : null;
+            if (part != null)
             {
-                var owning = comp.Prototype != null ? comp.Prototype.OwningPart : null;
-                if (owning != null && !string.IsNullOrEmpty(owning.Name)) return owning.Name;
+                try
+                {
+#pragma warning disable CS0618 // GetStringAttribute déprécié mais validé ici ; repli sûr sur Prototype.Name
+                    var v = part.GetStringAttribute("DB_PART_NAME");
+#pragma warning restore CS0618
+                    if (!string.IsNullOrEmpty(v)) return v.Trim();
+                }
+                catch { /* attribut absent → nom de pièce */ }
+
+                if (!string.IsNullOrEmpty(part.Name)) return StripManagedPrefix(part.Name);
             }
-            catch { /* repli ci-dessous */ }
-            return comp.DisplayName ?? "";
+            return comp != null ? (comp.DisplayName ?? comp.Name ?? "") : "";
+        }
+
+        /// <summary>« CAO…/AA-V3631_ARC20 » → « V3631_ARC20 » (préfixe id/rév retiré).</summary>
+        public static string StripManagedPrefix(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return "";
+            int slash = s.IndexOf('/');
+            int dash = s.IndexOf('-');
+            return (slash >= 0 && dash > slash) ? s.Substring(dash + 1).Trim() : s.Trim();
         }
 
         /// <summary>Nom d'instance lisible.</summary>
