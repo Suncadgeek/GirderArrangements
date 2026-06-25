@@ -164,7 +164,7 @@ namespace GirderArrangements
             gbBeams.Controls.Add(gp);
 
             // ---- 3. Options ----
-            var gbOpt = Group("3 — Boîte de sélection & options");
+            var gbOpt = Group("3 — Boîte de sélection et options");
             var go = Grid(1);
             go.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             var mRow = HRow();

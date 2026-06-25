@@ -14,5 +14,6 @@ obj/
 Thumbs.db
 .DS_Store
 
-# Note interne Confluence — ne pas publier sur GitHub
+# Note + assets internes Confluence — ne pas publier sur GitHub
 docs/Confluence_GirderArrangements_Concepteurs.md
+docs/*.png
