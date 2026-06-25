@@ -120,8 +120,9 @@ namespace GirderArrangements
         }
 
         /// <summary>
-        /// Ouvre l'anneau en STRUCTURE SEULE et liste les cellules + arcs (sans charger la géométrie).
-        /// L'anneau reste ouvert (coquille légère) ; les arcs seront ouverts un à un à la génération.
+        /// Ouvre l'anneau en STRUCTURE SEULE, liste les cellules + arcs (réfs TC), PUIS FERME l'anneau.
+        /// On ne garde pas l'anneau ouvert : une fois les arcs ouverts pour traitement, l'anneau ouvert
+        /// derrière déclencherait des boucles de mise à jour. Les arcs seront rouverts seuls à la génération.
         /// </summary>
         public RingListResult ListRing(ArrangementConfig cfg)
         {
@@ -131,13 +132,41 @@ namespace GirderArrangements
                 _log.Warn("Session NON managée — l'ouverture de l'anneau par réf TC peut échouer.");
 
             _log.Info("Ouverture de l'anneau en structure seule : " + ringRef);
-            _opener.OpenManaged(ringRef, partial: true);
+            var ring = _opener.OpenManaged(ringRef, partial: true);
             _ctx.RefreshParts();
 
             var nav = new NxRingNavigator(_ctx, _naming, _log);
             var res = new RingListResult();
             res.Cells.AddRange(nav.EnumerateCells());
+
+            CloseRing(ring);   // réfs obtenues → on ferme l'anneau (évite les boucles de MAJ)
             return res;
+        }
+
+        /// <summary>
+        /// Ferme l'anneau (et l'arbre chargé) une fois les références d'arcs récupérées. Fermeture ciblée
+        /// d'abord ; repli sur CloseAll si NX refuse de fermer la pièce affichée.
+        /// </summary>
+        private void CloseRing(NXOpen.Part ring)
+        {
+            if (ring == null) return;
+            try
+            {
+                ring.Close(NXOpen.BasePart.CloseWholeTree.True, NXOpen.BasePart.CloseModified.CloseModified, null);
+                _ctx.RefreshParts();
+                _log.Info("Anneau fermé (références d'arcs conservées).");
+            }
+            catch (Exception ex)
+            {
+                _log.Warn("Fermeture ciblée de l'anneau impossible (" + ex.Message + ") — repli CloseAll.");
+                try
+                {
+                    _ctx.Session.Parts.CloseAll(NXOpen.BasePart.CloseModified.CloseModified, null);
+                    _ctx.RefreshParts();
+                    _log.Info("Anneau fermé (CloseAll).");
+                }
+                catch (Exception ex2) { _log.Warn("Fermeture de l'anneau : " + ex2.Message); }
+            }
         }
 
         /// <summary>
