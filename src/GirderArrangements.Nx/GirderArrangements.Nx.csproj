@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <RootNamespace>GirderArrangements.Nx</RootNamespace>
+    <AssemblyName>GirderArrangements.Nx</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GirderArrangements.Core\GirderArrangements.Core.csproj" />
+  </ItemGroup>
+
+  <!-- Assemblies managées NXOpen (NX2406). Chemin via $(NxManagedDir), cf. Directory.Build.props.
+       Private=false : NE PAS copier les DLL NX (résolues depuis le NX de l'utilisateur → portabilité). -->
+  <ItemGroup>
+    <Reference Include="NXOpen">
+      <HintPath>$(NxManagedDir)\NXOpen.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="NXOpen.UF">
+      <HintPath>$(NxManagedDir)\NXOpen.UF.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="NXOpen.Utilities">
+      <HintPath>$(NxManagedDir)\NXOpen.Utilities.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="NXOpenUI">
+      <HintPath>$(NxManagedDir)\NXOpenUI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>

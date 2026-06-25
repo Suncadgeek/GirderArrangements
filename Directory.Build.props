@@ -1,0 +1,21 @@
+<Project>
+
+  <!--
+    Propriétés communes à tous les projets de la solution GirderArrangements.
+
+    NxManagedDir : répertoire des assemblies managées de NX2406.
+    Par défaut C:\Apps\Siemens\NX2406\NXBIN\managed (repris de CheckDistances / 3DBuilder).
+    Surchargeable par la variable d'environnement NX_MANAGED_DIR sans toucher aux .csproj.
+  -->
+  <PropertyGroup>
+    <NxManagedDir Condition="'$(NX_MANAGED_DIR)' != ''">$(NX_MANAGED_DIR)</NxManagedDir>
+    <NxManagedDir Condition="'$(NxManagedDir)' == ''">C:\Apps\Siemens\NX2406\NXBIN\managed</NxManagedDir>
+
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Deterministic>true</Deterministic>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+  </PropertyGroup>
+
+</Project>

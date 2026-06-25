@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    DLL stable chargée par NX : « GirderArrangements.dll ». Charge le code applicatif
+    (GirderArrangements.App/Core/Nx) PAR OCTETS → ces fichiers ne sont pas verrouillés → rebuild
+    possible SANS fermer NX. AUCUNE ProjectReference d'assembly (découplé) : sinon une modif de l'App
+    rebuilderait ce launcher, verrouillé par NX. Patron repris de CheckDistances / X-Section.
+  -->
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <RootNamespace>GirderArrangements.Launcher</RootNamespace>
+    <AssemblyName>GirderArrangements</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="NXOpen">
+      <HintPath>$(NxManagedDir)\NXOpen.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>

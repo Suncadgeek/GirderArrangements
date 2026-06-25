@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <RootNamespace>GirderArrangements.Core</RootNamespace>
+    <AssemblyName>GirderArrangements.Core</AssemblyName>
+  </PropertyGroup>
+
+  <!--
+    Couche métier pure : AUCUNE dépendance NXOpen ni WinForms.
+    Persistance config en JSON via System.Text.Json.
+  -->
+  <ItemGroup>
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+  </ItemGroup>
+
+</Project>

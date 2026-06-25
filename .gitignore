@@ -1,0 +1,18 @@
+# Build output
+bin/
+obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Rider / others
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Note interne Confluence — ne pas publier sur GitHub
+docs/Confluence_GirderArrangements_Concepteurs.md
