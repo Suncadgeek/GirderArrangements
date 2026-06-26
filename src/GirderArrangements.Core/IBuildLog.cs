@@ -10,8 +10,11 @@ namespace GirderArrangements.Core
         void Warn(string message);
         void Error(string message);
 
-        /// <summary>Avancement courant / total (pour une barre de progression).</summary>
+        /// <summary>Avancement GLOBAL courant / total (barre principale : arcs, ou l'arc en mono-arc).</summary>
         void Progress(int current, int total);
+
+        /// <summary>Avancement DANS l'arc courant (barre secondaire : arrangements créés poutre par poutre).</summary>
+        void SubProgress(int current, int total);
     }
 
     /// <summary>Implémentation neutre (ignore tout) utile pour les tests ou l'absence d'UI.</summary>
@@ -22,5 +25,6 @@ namespace GirderArrangements.Core
         public void Warn(string message) { }
         public void Error(string message) { }
         public void Progress(int current, int total) { }
+        public void SubProgress(int current, int total) { }
     }
 }

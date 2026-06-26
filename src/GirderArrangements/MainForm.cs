@@ -37,7 +37,7 @@ namespace GirderArrangements
         {
             InitializeComponent();
             LoadIcon();
-            _log = new UiBuildLog(txtLog, progressBar);
+            _log = new UiBuildLog(txtLog, progressBar, progressBarArc);
             _config = _store.Load();
             ApplyConfigToUi();
             UpdateBeamScopeEnabled();
@@ -229,6 +229,8 @@ namespace GirderArrangements
             SetBusy(true);
             _cancel = false;
             btnCancel.Enabled = true;
+            progressBar.Value = 0;
+            progressBarArc.Value = 0;
             SetStatus("Génération des arrangements…", DarkOrange);
             try
             {

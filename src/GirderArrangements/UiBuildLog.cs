@@ -22,13 +22,15 @@ namespace GirderArrangements
 
         private readonly TextBox _log;
         private readonly ProgressBar _bar;
+        private readonly ProgressBar _subBar;
         private readonly List<KeyValuePair<int, string>> _entries = new List<KeyValuePair<int, string>>();
         private int _minLevel = LevelInfo;
 
-        public UiBuildLog(TextBox log, ProgressBar bar)
+        public UiBuildLog(TextBox log, ProgressBar bar, ProgressBar subBar = null)
         {
             _log = log;
             _bar = bar;
+            _subBar = subBar;
         }
 
         /// <summary>Niveau minimal affiché (0=Info, 1=Avert., 2=Erreur). Réaffiche en cas de changement.</summary>
@@ -42,11 +44,15 @@ namespace GirderArrangements
         public void Warn(string message) => Add(LevelWarn, message);
         public void Error(string message) => Add(LevelError, message);
 
-        public void Progress(int current, int total)
+        public void Progress(int current, int total) => SetBar(_bar, current, total);
+
+        public void SubProgress(int current, int total) => SetBar(_subBar, current, total);
+
+        private static void SetBar(ProgressBar bar, int current, int total)
         {
-            if (_bar == null) return;
+            if (bar == null) return;
             int v = total > 0 ? (int)(1000L * current / total) : 0;
-            _bar.Value = Math.Max(0, Math.Min(_bar.Maximum, v));
+            bar.Value = Math.Max(0, Math.Min(bar.Maximum, v));
             Application.DoEvents();
         }
 
@@ -63,6 +69,8 @@ namespace GirderArrangements
         {
             _entries.Clear();
             if (_log != null) _log.Clear();
+            if (_bar != null) _bar.Value = 0;
+            if (_subBar != null) _subBar.Value = 0;
         }
 
         private void Add(int level, string message)

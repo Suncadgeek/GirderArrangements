@@ -107,8 +107,9 @@ namespace GirderArrangements
         {
             if (_model == null) throw new InvalidOperationException("Charge d'abord l'arc (Load).");
             var result = new RunResult();
-            ProcessArc(cfg, selectedBeamIndexes, isCancelled, result, reportProgress: true);
-            if (!result.Cancelled) result.ArcsProcessed = 1;
+            _log.Progress(0, 1);                 // barre globale : l'arc unique
+            ProcessArc(cfg, selectedBeamIndexes, isCancelled, result);
+            if (!result.Cancelled) { result.ArcsProcessed = 1; _log.Progress(1, 1); }
             return result;
         }
 
@@ -206,7 +207,7 @@ namespace GirderArrangements
                     _opener.OpenManaged(arcRef.TcRef, partial: false);   // gardé ouvert (pas de Close)
                     _ctx.RefreshParts();
                     _model = Parse();
-                    ProcessArc(cfg, null, isCancelled, result, reportProgress: false);
+                    ProcessArc(cfg, null, isCancelled, result);          // barre « Arc courant » pilotée dedans
                     result.ArcsProcessed++;
                 }
                 catch (Exception ex)
@@ -247,9 +248,12 @@ namespace GirderArrangements
             return res;
         }
 
-        /// <summary>Traite l'arc courant (_model) : boîtes locales, répartition, arrangements. Accumule dans result.</summary>
+        /// <summary>
+        /// Traite l'arc courant (_model) : boîtes locales, répartition, arrangements. Accumule dans result.
+        /// Pilote la barre « Arc courant » (SubProgress) poutre par poutre.
+        /// </summary>
         private void ProcessArc(ArrangementConfig cfg, ICollection<int> selectedBeamIndexes,
-            Func<bool> isCancelled, RunResult result, bool reportProgress)
+            Func<bool> isCancelled, RunResult result)
         {
             var reader = new NxGeometryReader(_ctx, _log);
 
@@ -298,6 +302,8 @@ namespace GirderArrangements
                 : new HashSet<int>(Enumerable.Range(0, _model.Beams.Count));
 
             int done = 0, localCreated = 0, localUpdated = 0;
+            int toDo = slots.Count(s => selected.Contains(s.Id));
+            _log.SubProgress(0, toDo);           // barre « Arc courant » remise à zéro pour cet arc
             foreach (var slot in slots)
             {
                 if (isCancelled != null && isCancelled()) { result.Cancelled = true; break; }
@@ -334,7 +340,7 @@ namespace GirderArrangements
 
                 result.BeamsProcessed++;
                 done++;
-                if (reportProgress) _log.Progress(done, selected.Count);
+                _log.SubProgress(done, toDo);
             }
 
             arrSvc.ActiveArrangement = master; // restaure l'arrangement maître

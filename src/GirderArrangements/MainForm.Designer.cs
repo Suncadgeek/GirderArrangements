@@ -37,7 +37,7 @@ namespace GirderArrangements
         private Label lblStatus, lblSummary;
         private ComboBox cboLogLevel;
         private Button btnCopyLog;
-        private ProgressBar progressBar;
+        private ProgressBar progressBar, progressBarArc;
         private TextBox txtLog;
 
         private static Label Lbl(string text)
@@ -106,14 +106,17 @@ namespace GirderArrangements
 
             // ---- Bannière ----
             var banner = new Panel { Dock = DockStyle.Fill, BackColor = Navy, Margin = new Padding(0, 0, 0, 10) };
-            var bg = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 2, BackColor = Navy, Padding = new Padding(14, 8, 12, 8) };
+            var bg = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, BackColor = Navy, Padding = new Padding(14, 6, 12, 6) };
             bg.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             bg.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            this.picIcon = new PictureBox { Width = 44, Height = 44, SizeMode = PictureBoxSizeMode.Zoom, Margin = new Padding(0, 0, 12, 0), Anchor = AnchorStyles.Left };
+            bg.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            // Icône centrée verticalement (Anchor=None) face au bloc de titre, lui aussi centré.
+            this.picIcon = new PictureBox { Width = 42, Height = 42, SizeMode = PictureBoxSizeMode.Zoom, Margin = new Padding(0, 0, 12, 0), Anchor = AnchorStyles.None };
             bg.Controls.Add(this.picIcon, 0, 0);
-            bg.SetRowSpan(this.picIcon, 2);
-            bg.Controls.Add(new Label { Text = "GirderArrangements", AutoSize = true, ForeColor = Color.White, Font = new Font("Segoe UI Semibold", 13F, FontStyle.Bold), Margin = new Padding(0, 2, 0, 0) }, 1, 0);
-            bg.Controls.Add(new Label { Text = "Un arrangement par poutre dans l'arc (aimants + cav posés dessus)", AutoSize = true, ForeColor = Color.FromArgb(176, 187, 204), Font = new Font("Segoe UI", 8.5F), Margin = new Padding(1, 1, 0, 0) }, 1, 1);
+            var titleStack = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = false, Anchor = AnchorStyles.Left, Margin = new Padding(0), BackColor = Navy };
+            titleStack.Controls.Add(new Label { Text = "GirderArrangements", AutoSize = true, ForeColor = Color.White, Font = new Font("Segoe UI Semibold", 13F, FontStyle.Bold), Margin = new Padding(0, 0, 0, 0) });
+            titleStack.Controls.Add(new Label { Text = "Un arrangement par poutre dans l'arc (aimants + cav posés dessus)", AutoSize = true, ForeColor = Color.FromArgb(176, 187, 204), Font = new Font("Segoe UI", 8.5F), Margin = new Padding(1, 1, 0, 0) });
+            bg.Controls.Add(titleStack, 1, 0);
             banner.Controls.Add(bg);
 
             // ---- 1. Arc (mono-arc) ----
@@ -167,7 +170,7 @@ namespace GirderArrangements
             this.btnUncheckAll = SmallBtn("Tout décocher", this.OnUncheckAll);
             head.Controls.Add(this.btnCheckAll);
             head.Controls.Add(this.btnUncheckAll);
-            this.lstBeams = new CheckedListBox { Dock = DockStyle.Fill, CheckOnClick = true, Enabled = false, IntegralHeight = false, Margin = new Padding(3, 2, 3, 4) };
+            this.lstBeams = new CheckedListBox { Dock = DockStyle.Fill, CheckOnClick = true, Enabled = false, IntegralHeight = false, MinimumSize = new Size(0, 130), Margin = new Padding(3, 2, 3, 4) };
             gp.Controls.Add(this.chkAllBeams, 0, 0);
             gp.Controls.Add(head, 0, 1);
             gp.Controls.Add(this.lstBeams, 0, 2);
@@ -226,10 +229,21 @@ namespace GirderArrangements
             this.btnCopyLog = SmallBtn("Copier le journal", this.OnCopyLog, enabled: true);
             this.btnCopyLog.Margin = new Padding(12, 4, 3, 3);
             logRow.Controls.Add(this.btnCopyLog);
-            this.progressBar = new ProgressBar { Dock = DockStyle.Fill, Height = 18, Maximum = 1000, Margin = new Padding(3, 4, 3, 4) };
+            // Deux barres : « Global » (arcs en mode anneau / l'arc en mono-arc) et « Arc courant »
+            // (avancement de la création des arrangements, poutre par poutre, dans l'arc en cours).
+            var prog = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 2, AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink, Margin = new Padding(0) };
+            prog.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            prog.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            prog.Controls.Add(new Label { Text = "Global", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(3, 5, 8, 3) }, 0, 0);
+            this.progressBar = new ProgressBar { Dock = DockStyle.Fill, Height = 16, Maximum = 1000, Margin = new Padding(0, 4, 3, 3) };
+            prog.Controls.Add(this.progressBar, 1, 0);
+            prog.Controls.Add(new Label { Text = "Arc courant", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(3, 5, 8, 3) }, 0, 1);
+            this.progressBarArc = new ProgressBar { Dock = DockStyle.Fill, Height = 16, Maximum = 1000, Margin = new Padding(0, 3, 3, 4) };
+            prog.Controls.Add(this.progressBarArc, 1, 1);
             this.txtLog = new TextBox { Dock = DockStyle.Fill, Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, BackColor = Color.FromArgb(250, 250, 252), Margin = new Padding(3, 2, 3, 2) };
             gj.Controls.Add(logRow, 0, 0);
-            gj.Controls.Add(this.progressBar, 0, 1);
+            gj.Controls.Add(prog, 0, 1);
             gj.Controls.Add(this.txtLog, 0, 2);
             gbJournal.Controls.Add(gj);
 
@@ -256,8 +270,8 @@ namespace GirderArrangements
             this.AutoScaleMode = AutoScaleMode.Dpi;
             this.Font = new Font("Segoe UI", 9F);
             this.BackColor = FormBg;
-            this.ClientSize = new Size(660, 800);
-            this.MinimumSize = new Size(520, 520);
+            this.ClientSize = new Size(660, 820);
+            this.MinimumSize = new Size(560, 720);
             this.Controls.Add(root);
             this.FormBorderStyle = FormBorderStyle.Sizable;
             this.MaximizeBox = true; this.MinimizeBox = true;
