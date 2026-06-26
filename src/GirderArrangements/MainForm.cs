@@ -24,6 +24,7 @@ namespace GirderArrangements
         private ArrangementGenerator _gen;
         private List<BeamInfo> _beams = new List<BeamInfo>();
         private List<RingCell> _cells = new List<RingCell>();
+        private List<RingArc> _ringArcs = new List<RingArc>();   // arcs à plat (1 case = 1 arc), index aligné sur lstBeams
         private PickMode _mode = PickMode.SingleArc;
         private bool _cancel;
         private bool _busy;
@@ -147,6 +148,7 @@ namespace GirderArrangements
                 chkAllBeams.Text = "Toutes les poutres";
                 _beams = res.Beams;
                 _cells = new List<RingCell>();
+                _ringArcs = new List<RingArc>();
                 lstBeams.Items.Clear();
                 foreach (var b in _beams)
                     lstBeams.Items.Add(b.PoutreName + "   →   " + b.ArrangementName, true);
@@ -187,19 +189,28 @@ namespace GirderArrangements
                 var res = _gen.ListRing(cfg, forceRefresh);
 
                 _mode = PickMode.Ring;
-                lblPickHead.Text = "Cellules à traiter :";
-                chkAllBeams.Text = "Toutes les cellules";
+                lblPickHead.Text = "Arcs à traiter :";
+                chkAllBeams.Text = "Tous les arcs";
                 _cells = res.Cells;
                 _beams = new List<BeamInfo>();
+
+                // Une case par ARC (pas par cellule) : on aplatit les cellules → arcs. Le nom de cellule
+                // n'est préfixé que s'il y a plusieurs cellules (sinon redondant, ex. repli cache CheckDistances).
+                _ringArcs = new List<RingArc>();
+                bool showCell = _cells.Count > 1;
                 lstBeams.Items.Clear();
                 foreach (var c in _cells)
-                    lstBeams.Items.Add($"{c.Name}   ({c.Arcs.Count} arc(s))", true);
+                    foreach (var a in c.Arcs)
+                    {
+                        _ringArcs.Add(a);
+                        lstBeams.Items.Add(showCell ? (c.Name + "   /   " + a.Name) : a.Name, true);
+                    }
 
                 UpdateBeamScopeEnabled();
-                int arcCount = _cells.Sum(c => c.Arcs.Count);
+                int arcCount = _ringArcs.Count;
                 btnGenerate.Enabled = arcCount > 0;
                 progressBar.Value = progressBar.Maximum;
-                SetStatus($"{_cells.Count} cellule(s), {arcCount} arc(s). Choisis les cellules puis « Générer les arrangements ».",
+                SetStatus($"{_cells.Count} cellule(s), {arcCount} arc(s). Choisis les arcs puis « Générer les arrangements ».",
                     arcCount > 0 ? Green : Red);
             }
             catch (Exception ex)
@@ -227,7 +238,7 @@ namespace GirderArrangements
                 if (_mode == PickMode.Ring)
                 {
                     var arcs = SelectedRingArcs();
-                    if (arcs.Count == 0) { SetStatus("Aucune cellule/arc sélectionné.", Red); return; }
+                    if (arcs.Count == 0) { SetStatus("Aucun arc sélectionné.", Red); return; }
                     res = _gen.RunRing(cfg, arcs, cancel);
                 }
                 else
@@ -261,12 +272,10 @@ namespace GirderArrangements
 
         private List<RingArc> SelectedRingArcs()
         {
+            if (chkAllBeams.Checked) return new List<RingArc>(_ringArcs);
             var arcs = new List<RingArc>();
-            IEnumerable<int> cellIdx = chkAllBeams.Checked
-                ? Enumerable.Range(0, _cells.Count)
-                : lstBeams.CheckedIndices.Cast<int>();
-            foreach (int i in cellIdx)
-                if (i >= 0 && i < _cells.Count) arcs.AddRange(_cells[i].Arcs);
+            foreach (int i in lstBeams.CheckedIndices)
+                if (i >= 0 && i < _ringArcs.Count) arcs.Add(_ringArcs[i]);
             return arcs;
         }
 
@@ -336,7 +345,7 @@ namespace GirderArrangements
             btnUseCurrent.Enabled = !busy;
             btnListRing.Enabled = !busy;
             btnRefreshRing.Enabled = !busy;
-            bool hasWork = _mode == PickMode.Ring ? (_cells != null && _cells.Count > 0) : (_beams != null && _beams.Count > 0);
+            bool hasWork = _mode == PickMode.Ring ? (_ringArcs != null && _ringArcs.Count > 0) : (_beams != null && _beams.Count > 0);
             btnGenerate.Enabled = !busy && hasWork;
             btnSave.Enabled = !busy && _gen != null && _gen.ModifiedArcs.Count > 0;
             Cursor = busy ? Cursors.WaitCursor : Cursors.Default;
