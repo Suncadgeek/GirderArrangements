@@ -11,7 +11,15 @@
     <UseWindowsForms>true</UseWindowsForms>
     <RootNamespace>GirderArrangements</RootNamespace>
     <AssemblyName>GirderArrangements.App</AssemblyName>
+    <ApplicationIcon>Resources\ico.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <!-- Icône embarquée (lue par MainForm via GetManifestResourceStream). -->
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\ico.ico">
+      <LogicalName>GirderArrangements.Resources.ico.ico</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\GirderArrangements.Core\GirderArrangements.Core.csproj" />

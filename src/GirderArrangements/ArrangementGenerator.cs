@@ -120,14 +120,30 @@ namespace GirderArrangements
         }
 
         /// <summary>
-        /// Ouvre l'anneau en STRUCTURE SEULE, liste les cellules + arcs (réfs TC), PUIS FERME l'anneau.
-        /// On ne garde pas l'anneau ouvert : une fois les arcs ouverts pour traitement, l'anneau ouvert
-        /// derrière déclencherait des boucles de mise à jour. Les arcs seront rouverts seuls à la génération.
+        /// Liste les cellules + arcs (réfs TC) de l'anneau. Par défaut sert le CACHE disque si présent
+        /// (relecture instantanée, réutilise au besoin le cache de CheckDistances pour le même anneau).
+        /// Sinon (ou si <paramref name="forceRefresh"/>) : ouvre l'anneau en STRUCTURE SEULE, énumère,
+        /// PUIS FERME l'anneau (sinon, une fois les arcs ouverts, l'anneau derrière déclencherait des
+        /// boucles de mise à jour) et met le cache à jour. Les arcs seront rouverts seuls à la génération.
         /// </summary>
-        public RingListResult ListRing(ArrangementConfig cfg)
+        public RingListResult ListRing(ArrangementConfig cfg, bool forceRefresh = false)
         {
             var ringRef = (cfg.RingTcRef ?? "").Trim();
             if (string.IsNullOrEmpty(ringRef)) throw new InvalidOperationException("Réf TC de l'anneau vide.");
+
+            if (!forceRefresh)
+            {
+                var cached = RingListCache.Load(ringRef, out var source);
+                if (cached != null)
+                {
+                    int n = cached.Sum(c => c.Arcs.Count);
+                    _log.Info($"{n} arc(s) depuis le {source} (« Rafraîchir » pour relire Teamcenter).");
+                    var hit = new RingListResult();
+                    hit.Cells.AddRange(cached);
+                    return hit;
+                }
+            }
+
             if (!NxEnvironment.IsManaged(_ctx))
                 _log.Warn("Session NON managée — l'ouverture de l'anneau par réf TC peut échouer.");
 
@@ -140,6 +156,7 @@ namespace GirderArrangements
             res.Cells.AddRange(nav.EnumerateCells());
 
             CloseRing(ring);   // réfs obtenues → on ferme l'anneau (évite les boucles de MAJ)
+            if (res.Cells.Any(c => c.Arcs.Count > 0)) RingListCache.Save(ringRef, res.Cells);
             return res;
         }
 

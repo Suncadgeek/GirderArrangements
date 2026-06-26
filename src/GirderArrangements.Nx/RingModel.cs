@@ -14,6 +14,8 @@ namespace GirderArrangements.Nx
     {
         public string Name { get; set; } = "";
         public string TcRef { get; set; } = "";
-        public List<RingArc> Arcs { get; } = new List<RingArc>();
+        // set; requis : System.Text.Json ne PEUPLE PAS une collection en lecture seule à la
+        // désérialisation (le cache anneau relirait des cellules sans arcs).
+        public List<RingArc> Arcs { get; set; } = new List<RingArc>();
     }
 }

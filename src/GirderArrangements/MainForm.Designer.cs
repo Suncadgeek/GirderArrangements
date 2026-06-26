@@ -22,10 +22,11 @@ namespace GirderArrangements
         private static readonly Color BorderCol = Color.FromArgb(210, 215, 222);
         private static readonly Color FormBg = Color.FromArgb(249, 250, 252);
 
+        private PictureBox picIcon;
         private TextBox txtArcTc;
         private Button btnLoad, btnUseCurrent;
         private TextBox txtRingTc;
-        private Button btnListRing;
+        private Button btnListRing, btnRefreshRing;
         private Label lblPickHead;
         private CheckBox chkAllBeams;
         private CheckedListBox lstBeams;
@@ -105,9 +106,14 @@ namespace GirderArrangements
 
             // ---- Bannière ----
             var banner = new Panel { Dock = DockStyle.Fill, BackColor = Navy, Margin = new Padding(0, 0, 0, 10) };
-            var bg = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, BackColor = Navy, Padding = new Padding(14, 8, 12, 8) };
-            bg.Controls.Add(new Label { Text = "GirderArrangements", AutoSize = true, ForeColor = Color.White, Font = new Font("Segoe UI Semibold", 13F, FontStyle.Bold), Margin = new Padding(0, 2, 0, 0) }, 0, 0);
-            bg.Controls.Add(new Label { Text = "Un arrangement par poutre dans l'arc (aimants + cav posés dessus)", AutoSize = true, ForeColor = Color.FromArgb(176, 187, 204), Font = new Font("Segoe UI", 8.5F), Margin = new Padding(1, 1, 0, 0) }, 0, 1);
+            var bg = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 2, BackColor = Navy, Padding = new Padding(14, 8, 12, 8) };
+            bg.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            bg.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            this.picIcon = new PictureBox { Width = 44, Height = 44, SizeMode = PictureBoxSizeMode.Zoom, Margin = new Padding(0, 0, 12, 0), Anchor = AnchorStyles.Left };
+            bg.Controls.Add(this.picIcon, 0, 0);
+            bg.SetRowSpan(this.picIcon, 2);
+            bg.Controls.Add(new Label { Text = "GirderArrangements", AutoSize = true, ForeColor = Color.White, Font = new Font("Segoe UI Semibold", 13F, FontStyle.Bold), Margin = new Padding(0, 2, 0, 0) }, 1, 0);
+            bg.Controls.Add(new Label { Text = "Un arrangement par poutre dans l'arc (aimants + cav posés dessus)", AutoSize = true, ForeColor = Color.FromArgb(176, 187, 204), Font = new Font("Segoe UI", 8.5F), Margin = new Padding(1, 1, 0, 0) }, 1, 1);
             banner.Controls.Add(bg);
 
             // ---- 1. Arc (mono-arc) ----
@@ -136,8 +142,12 @@ namespace GirderArrangements
             gri.SetColumnSpan(gri.GetControlFromPosition(0, 0), 2);
             this.txtRingTc = new TextBox { Dock = DockStyle.Fill, Margin = new Padding(3, 2, 3, 6) };
             gri.Controls.Add(this.txtRingTc, 0, 1);
+            var ringBtns = HRow();
             this.btnListRing = SmallBtnWide("Lister les cellules", this.OnListRing);
-            gri.Controls.Add(this.btnListRing, 1, 1);
+            this.btnRefreshRing = SmallBtnWide("Rafraîchir", this.OnRefreshRing);
+            ringBtns.Controls.Add(this.btnListRing);
+            ringBtns.Controls.Add(this.btnRefreshRing);
+            gri.Controls.Add(ringBtns, 1, 1);
             gbRing.Controls.Add(gri);
 
             // ---- 2. Poutres (élastique) ----

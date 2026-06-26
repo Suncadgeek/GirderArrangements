@@ -35,10 +35,25 @@ namespace GirderArrangements
         public MainForm()
         {
             InitializeComponent();
+            LoadIcon();
             _log = new UiBuildLog(txtLog, progressBar);
             _config = _store.Load();
             ApplyConfigToUi();
             UpdateBeamScopeEnabled();
+        }
+
+        private void LoadIcon()
+        {
+            try
+            {
+                using (var s = typeof(MainForm).Assembly.GetManifestResourceStream("GirderArrangements.Resources.ico.ico"))
+                {
+                    if (s == null) return;
+                    Icon = new System.Drawing.Icon(s);
+                    if (picIcon != null) picIcon.Image = Icon.ToBitmap();
+                }
+            }
+            catch { /* icône optionnelle */ }
         }
 
         // ----------------------------------------------------------------- config <-> UI
@@ -151,7 +166,11 @@ namespace GirderArrangements
             finally { SetBusy(false); }
         }
 
-        private void OnListRing(object sender, EventArgs e)
+        private void OnListRing(object sender, EventArgs e) => ListRing(forceRefresh: false);
+
+        private void OnRefreshRing(object sender, EventArgs e) => ListRing(forceRefresh: true);
+
+        private void ListRing(bool forceRefresh)
         {
             if (_busy) return;
             var cfg = ReadConfigFromUi();
@@ -159,11 +178,13 @@ namespace GirderArrangements
 
             SetBusy(true);
             _log.Clear();
-            SetStatus("Lecture de la structure de l'anneau (cellules / arcs)…", DarkOrange);
+            SetStatus(forceRefresh
+                ? "Rafraîchissement des arcs depuis Teamcenter…"
+                : "Lecture de la structure de l'anneau (cellules / arcs)…", DarkOrange);
             try
             {
                 EnsureGen();
-                var res = _gen.ListRing(cfg);
+                var res = _gen.ListRing(cfg, forceRefresh);
 
                 _mode = PickMode.Ring;
                 lblPickHead.Text = "Cellules à traiter :";
@@ -314,6 +335,7 @@ namespace GirderArrangements
             btnLoad.Enabled = !busy;
             btnUseCurrent.Enabled = !busy;
             btnListRing.Enabled = !busy;
+            btnRefreshRing.Enabled = !busy;
             bool hasWork = _mode == PickMode.Ring ? (_cells != null && _cells.Count > 0) : (_beams != null && _beams.Count > 0);
             btnGenerate.Enabled = !busy && hasWork;
             btnSave.Enabled = !busy && _gen != null && _gen.ModifiedArcs.Count > 0;
