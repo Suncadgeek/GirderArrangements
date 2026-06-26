@@ -33,10 +33,16 @@ namespace GirderArrangements.Launcher
             entry.GetMethod("Run", BindingFlags.Public | BindingFlags.Static).Invoke(null, null);
         }
 
-        /// <summary>Décharge l'image dès la fin de l'exécution.</summary>
+        /// <summary>
+        /// Garde l'image chargée jusqu'à la fermeture de NX. REQUIS par la fenêtre MODELESS : après le
+        /// retour de Main, la fenêtre continue de tourner sur ce code — un déchargement « Immediately »
+        /// la ferait planter. Le hot-reload du code applicatif reste assuré par le chargement par octets
+        /// (chaque Main recharge GirderArrangements.App/Core/Nx frais). Seul le launcher reste verrouillé
+        /// pour la session NX → pour redéployer sur V:, fermer NX d'abord.
+        /// </summary>
         public static int GetUnloadOption(string dummy)
         {
-            return (int)Session.LibraryUnloadOption.Immediately;
+            return (int)Session.LibraryUnloadOption.AtTermination;
         }
 
         private static Assembly Resolve(object sender, ResolveEventArgs e)
